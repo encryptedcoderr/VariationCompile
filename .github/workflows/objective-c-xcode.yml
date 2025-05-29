@@ -1,0 +1,72 @@
+name: Generate APAC MP4 Files for Variations
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build-and-generate:
+    runs-on: macos-latest
+
+    strategy:
+      matrix:
+        variation: [1, 2, 3] # Corresponds to NatePocVar1.mm, NatePocVar2.mm, NatePocVar3.mm
+
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Set up Xcode (ensure iOS SDK is available)
+    - name: Select Xcode version
+      run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+    # Verify Xcode and SDK
+    - name: Verify iOS SDK
+      run: xcrun --sdk iphoneos --show-sdk-path
+
+    # Create build script for each variation
+    - name: Create build script
+      run: |
+        cat << 'EOF' > build_poc_variation${{ matrix.variation }}.sh
+        #!/bin/bash
+        set -e
+        clang++ -g -Os -std=c++23 -fmodules -fcxx-modules -fobjc-arc -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -framework AVFAudio -framework AudioToolbox NatePocVar${{ matrix.variation }}.mm -o poc_variation${{ matrix.variation }}
+        chmod +x poc_variation${{ matrix.variation }}
+        EOF
+        chmod +x build_poc_variation${{ matrix.variation }}.sh
+
+    # Compile the variation
+    - name: Compile NatePocVar${{ matrix.variation }}
+      run: ./build_poc_variation${{ matrix.variation }}.sh
+
+    # Boot iOS simulator
+    - name: Boot iOS simulator
+      run: |
+        xcrun simctl boot "iPhone 15" || true # Ignore if already booted
+        xcrun simctl status_bar "iPhone 15" override --time "2025-05-29T15:00:00-0700" --batteryState charged --batteryLevel 100
+
+    # Run the variation in simulator
+    - name: Run NatePocVar${{ matrix.variation }}
+      run: xcrun simctl spawn "iPhone 15" ./poc_variation${{ matrix.variation }}
+
+    # Verify generated files
+    - name: List generated files for variation ${{ matrix.variation }}
+      run: ls -lh output_*.mp4 || echo "No MP4 files found for variation ${{ matrix.variation }}"
+
+    # Upload MP4 files as artifacts
+    - name: Upload MP4 artifacts for variation ${{ matrix.variation }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: apac-mp4-files-var${{ matrix.variation }}
+        path: |
+          output_0.mp4
+          output_1.mp4
+          output_2.mp4
+          output_3.mp4
+          output_4.mp4Baltimore Ravens
+        retention-days: 7
+        if-no-files-found: warn
