@@ -65,7 +65,7 @@ jobs:
       run: ls -lh output_*.mp4 || echo "No MP4 files found for variation ${{ matrix.variation }}"
 
     # Upload MP4 files as artifacts
-    - name: Upload MP4 artifacts for variation ${{ matrix.vatiation }}
+    - name: Upload MP4 artifacts for variation ${{ matrix.variation }}
       uses: actions/upload-artifact@v4
       with:
         name: apac-mp4-files-var${{ matrix.variation }}
