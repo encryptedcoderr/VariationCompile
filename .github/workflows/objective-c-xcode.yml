@@ -24,9 +24,12 @@ jobs:
     - name: Select Xcode version
       run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
-    # Verify Xcode and SDK
-    - name: Verify iOS SDK
-      run: xcrun --sdk iphoneos --show-sdk-path
+    # Verify Xcode and clang version
+    - name: Verify Xcode and clang version
+      run: |
+        xcodebuild -version
+        clang++ --version
+        xcrun --sdk iphoneos --show-sdk-path
 
     # Create build script for each variation
     - name: Create build script
@@ -35,7 +38,7 @@ jobs:
         cat << 'EOF' > build_poc_variation${{ matrix.variation }}.sh
         #!/bin/bash
         set -e
-        clang++ -g -Os -std=c++23 -fmodules -fcxx-modules -fobjc-arc -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -framework AVFAudio -framework AudioToolbox NatePocVar${{ matrix.variation }}.mm -o poc_variation${{ matrix.variation }}
+        clang++ -g -Os -std=c++2b -fmodules -fcxx-modules -fobjc-arc -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -framework AVFAudio -framework AudioToolbox NatePocVar${{ matrix.variation }}.mm -o poc_variation${{ matrix.variation }}
         chmod +x poc_variation${{ matrix.variation }}
         EOF
         chmod +x build_poc_variation${{ matrix.variation }}.sh
@@ -62,7 +65,7 @@ jobs:
       run: ls -lh output_*.mp4 || echo "No MP4 files found for variation ${{ matrix.variation }}"
 
     # Upload MP4 files as artifacts
-    - name: Upload MP4 artifacts for variation ${{ matrix.variation }}
+    - name: Upload MP4 artifacts for variation ${{ matrix.vatiation }}
       uses: actions/upload-artifact@v4
       with:
         name: apac-mp4-files-var${{ matrix.variation }}
